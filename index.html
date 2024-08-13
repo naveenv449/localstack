@@ -19,45 +19,59 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('/buckets')
-                .then(response => response.json())
-                .then(buckets => {
-                    const bucketSelect = document.getElementById('bucket-select');
-                    buckets.forEach(bucket => {
-                        const option = document.createElement('option');
-                        option.value = bucket;
-                        option.textContent = bucket;
-                        bucketSelect.appendChild(option);
-                    });
+    fetch('/buckets')
+        .then(response => response.json())
+        .then(buckets => {
+            const bucketSelect = document.getElementById('bucket-select');
+            buckets.forEach(bucket => {
+                const option = document.createElement('option');
+                option.value = bucket;
+                option.textContent = bucket;
+                bucketSelect.appendChild(option);
+            });
 
-                    bucketSelect.addEventListener('change', function() {
-                        const selectedBucket = this.value;
-                        fetch(`/buckets/${selectedBucket}/keys`)
-                            .then(response => response.json())
-                            .then(keys => {
-                                const keysList = document.getElementById('keys-list');
-                                keysList.innerHTML = '';
-                                keys.forEach(key => {
-                                    const listItem = document.createElement('li');
-                                    listItem.className = 'list-group-item';
-                                    listItem.textContent = key;
-                                    listItem.addEventListener('click', function() {
-                                        if (key.endsWith('/')) {
-                                            fetch(`/buckets/${selectedBucket}/keys/${key}`)
-                                                .then(response => response.json())
-                                                .then(subKeys => {
-                                                    // Handle folders (sub-keys)
-                                                });
-                                        } else {
-                                            window.location.href = `/buckets/${selectedBucket}/keys/${key}/download`;
-                                        }
-                                    });
-                                    keysList.appendChild(listItem);
-                                });
-                            });
-                    });
-                });
+            bucketSelect.addEventListener('change', function() {
+                const selectedBucket = this.value;
+                fetchKeys(selectedBucket, '');
+            });
         });
+
+    function fetchKeys(bucketName, prefix) {
+        fetch(`/buckets/${bucketName}/keys?prefix=${encodeURIComponent(prefix)}`)
+            .then(response => response.json())
+            .then(data => {
+                const keysList = document.getElementById('keys-list');
+                keysList.innerHTML = '';
+
+                // Add folders (prefixes)
+                data.prefixes.forEach(prefixObj => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'list-group-item list-group-item-action';
+                    const prefixName = prefixObj.Prefix;
+                    listItem.textContent = prefixName;
+                    listItem.addEventListener('click', function() {
+                        fetchKeys(bucketName, prefixName);
+                    });
+                    keysList.appendChild(listItem);
+                });
+
+                // Add files
+                data.files.forEach(fileObj => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'list-group-item';
+                    const fileName = fileObj.Key;
+                    if (fileName !== prefix) {  // Avoid listing the folder itself
+                        listItem.textContent = fileName.split('/').pop();
+                        listItem.addEventListener('click', function() {
+                            window.location.href = `/buckets/${bucketName}/keys/${encodeURIComponent(fileName)}/download`;
+                        });
+                        keysList.appendChild(listItem);
+                    }
+                });
+            });
+    }
+});
+
     </script>
 </body>
 </html>
