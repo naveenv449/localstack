@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 Browser</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2 class="text-center">S3 Bucket Browser</h2>
+        <div class="mb-3">
+            <select class="form-select" id="bucket-select">
+                <option selected>Select a Bucket</option>
+            </select>
+        </div>
+        <ul class="list-group" id="keys-list"></ul>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/buckets')
+                .then(response => response.json())
+                .then(buckets => {
+                    const bucketSelect = document.getElementById('bucket-select');
+                    buckets.forEach(bucket => {
+                        const option = document.createElement('option');
+                        option.value = bucket;
+                        option.textContent = bucket;
+                        bucketSelect.appendChild(option);
+                    });
+
+                    bucketSelect.addEventListener('change', function() {
+                        const selectedBucket = this.value;
+                        fetch(`/buckets/${selectedBucket}/keys`)
+                            .then(response => response.json())
+                            .then(keys => {
+                                const keysList = document.getElementById('keys-list');
+                                keysList.innerHTML = '';
+                                keys.forEach(key => {
+                                    const listItem = document.createElement('li');
+                                    listItem.className = 'list-group-item';
+                                    listItem.textContent = key;
+                                    listItem.addEventListener('click', function() {
+                                        if (key.endsWith('/')) {
+                                            fetch(`/buckets/${selectedBucket}/keys/${key}`)
+                                                .then(response => response.json())
+                                                .then(subKeys => {
+                                                    // Handle folders (sub-keys)
+                                                });
+                                        } else {
+                                            window.location.href = `/buckets/${selectedBucket}/keys/${key}/download`;
+                                        }
+                                    });
+                                    keysList.appendChild(listItem);
+                                });
+                            });
+                    });
+                });
+        });
+    </script>
+</body>
+</html>
