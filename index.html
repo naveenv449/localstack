@@ -93,42 +93,45 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    function updateBreadcrumb() {
-        const breadcrumb = document.getElementById('breadcrumb');
-        breadcrumb.innerHTML = '';
+   function updateBreadcrumb() {
+    const breadcrumb = document.getElementById('breadcrumb');
+    breadcrumb.innerHTML = '';
 
-        const rootBreadcrumb = document.createElement('li');
-        rootBreadcrumb.className = 'breadcrumb-item';
-        rootBreadcrumb.innerHTML = '<a href="#" id="root-breadcrumb">Root</a>';
-        rootBreadcrumb.addEventListener('click', function() {
-            currentPrefix = '';
-            updateBreadcrumb();
-            fetchKeys(document.getElementById('bucket-select').value, '');
-        });
-        breadcrumb.appendChild(rootBreadcrumb);
+    const rootBreadcrumb = document.createElement('li');
+    rootBreadcrumb.className = 'breadcrumb-item';
+    rootBreadcrumb.innerHTML = '<a href="#" id="root-breadcrumb">Root</a>';
+    rootBreadcrumb.addEventListener('click', function() {
+        currentPrefix = '';
+        updateBreadcrumb();
+        fetchKeys(document.getElementById('bucket-select').value, '');
+    });
+    breadcrumb.appendChild(rootBreadcrumb);
 
-        const parts = currentPrefix.split('/').filter(part => part);
-        let accumulatedPath = '';
-        parts.forEach((part, index) => {
-            accumulatedPath += part + '/';
-            const breadcrumbItem = document.createElement('li');
-            breadcrumbItem.className = 'breadcrumb-item';
-            if (index === parts.length - 1) {
-                breadcrumbItem.textContent = part;
-            } else {
-                const breadcrumbLink = document.createElement('a');
-                breadcrumbLink.href = '#';
-                breadcrumbLink.textContent = part;
-                breadcrumbLink.addEventListener('click', function() {
-                    currentPrefix = accumulatedPath;
-                    updateBreadcrumb();
-                    fetchKeys(document.getElementById('bucket-select').value, currentPrefix);
-                });
-                breadcrumbItem.appendChild(breadcrumbLink);
-            }
-            breadcrumb.appendChild(breadcrumbItem);
-        });
-    }
+    const parts = currentPrefix.split('/').filter(part => part);
+    let accumulatedPath = '';
+
+    parts.forEach((part, index) => {
+        accumulatedPath += part + '/';
+        const breadcrumbItem = document.createElement('li');
+        breadcrumbItem.className = 'breadcrumb-item';
+
+        if (index === parts.length - 1) {
+            breadcrumbItem.textContent = part;
+        } else {
+            const breadcrumbLink = document.createElement('a');
+            breadcrumbLink.href = '#';
+            breadcrumbLink.textContent = part;
+            breadcrumbLink.addEventListener('click', function() {
+                currentPrefix = accumulatedPath;
+                updateBreadcrumb();
+                fetchKeys(document.getElementById('bucket-select').value, currentPrefix);
+            });
+            breadcrumbItem.appendChild(breadcrumbLink);
+        }
+        breadcrumb.appendChild(breadcrumbItem);
+    });
+}
+
 });
 </script>
 </body>
