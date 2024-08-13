@@ -3,22 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S3 Browser</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>S3 Bucket Browser</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .breadcrumb-item a {
+            text-decoration: none;
+            color: #007bff;
+        }
+        .breadcrumb-item a:hover {
+            text-decoration: underline;
+        }
+        .list-group-item-action:hover {
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-4">
-        <h2 class="text-center">S3 Bucket Browser</h2>
-        <div class="mb-3">
-            <select class="form-select" id="bucket-select">
-                <option selected>Select a Bucket</option>
-            </select>
-        </div>
-        <ul class="list-group" id="keys-list"></ul>
-    </div>
+<div class="container mt-5">
+    <h1 class="mb-4">S3 Bucket Browser</h1>
+    <select id="bucket-select" class="form-control mb-3">
+        <option>Select a bucket</option>
+    </select>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb" id="breadcrumb">
+            <li class="breadcrumb-item"><a href="#" id="root-breadcrumb">Root</a></li>
+        </ol>
+    </nav>
+    <ul id="keys-list" class="list-group">
+        <!-- Folders and files will be listed here -->
+    </ul>
+</div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentPrefix = '';
+
     fetch('/buckets')
         .then(response => response.json())
         .then(buckets => {
@@ -32,6 +52,8 @@
 
             bucketSelect.addEventListener('change', function() {
                 const selectedBucket = this.value;
+                currentPrefix = '';
+                updateBreadcrumb();
                 fetchKeys(selectedBucket, '');
             });
         });
@@ -47,10 +69,12 @@
                 data.prefixes.forEach(prefixObj => {
                     const listItem = document.createElement('li');
                     listItem.className = 'list-group-item list-group-item-action';
-                    const prefixName = prefixObj.Prefix;
-                    listItem.textContent = prefixName;
+                    const folderName = prefixObj.Prefix.replace(prefix, '').replace('/', '');
+                    listItem.textContent = folderName;
                     listItem.addEventListener('click', function() {
-                        fetchKeys(bucketName, prefixName);
+                        currentPrefix = prefixObj.Prefix;
+                        updateBreadcrumb();
+                        fetchKeys(bucketName, currentPrefix);
                     });
                     keysList.appendChild(listItem);
                 });
@@ -59,19 +83,53 @@
                 data.files.forEach(fileObj => {
                     const listItem = document.createElement('li');
                     listItem.className = 'list-group-item';
-                    const fileName = fileObj.Key;
-                    if (fileName !== prefix) {  // Avoid listing the folder itself
-                        listItem.textContent = fileName.split('/').pop();
-                        listItem.addEventListener('click', function() {
-                            window.location.href = `/buckets/${bucketName}/keys/${encodeURIComponent(fileName)}/download`;
-                        });
-                        keysList.appendChild(listItem);
-                    }
+                    const fileName = fileObj.Key.replace(prefix, '');
+                    listItem.textContent = fileName;
+                    listItem.addEventListener('click', function() {
+                        window.location.href = `/buckets/${bucketName}/keys/${encodeURIComponent(fileObj.Key)}/download`;
+                    });
+                    keysList.appendChild(listItem);
                 });
             });
     }
-});
 
-    </script>
+    function updateBreadcrumb() {
+        const breadcrumb = document.getElementById('breadcrumb');
+        breadcrumb.innerHTML = '';
+
+        const rootBreadcrumb = document.createElement('li');
+        rootBreadcrumb.className = 'breadcrumb-item';
+        rootBreadcrumb.innerHTML = '<a href="#" id="root-breadcrumb">Root</a>';
+        rootBreadcrumb.addEventListener('click', function() {
+            currentPrefix = '';
+            updateBreadcrumb();
+            fetchKeys(document.getElementById('bucket-select').value, '');
+        });
+        breadcrumb.appendChild(rootBreadcrumb);
+
+        const parts = currentPrefix.split('/').filter(part => part);
+        let accumulatedPath = '';
+        parts.forEach((part, index) => {
+            accumulatedPath += part + '/';
+            const breadcrumbItem = document.createElement('li');
+            breadcrumbItem.className = 'breadcrumb-item';
+            if (index === parts.length - 1) {
+                breadcrumbItem.textContent = part;
+            } else {
+                const breadcrumbLink = document.createElement('a');
+                breadcrumbLink.href = '#';
+                breadcrumbLink.textContent = part;
+                breadcrumbLink.addEventListener('click', function() {
+                    currentPrefix = accumulatedPath;
+                    updateBreadcrumb();
+                    fetchKeys(document.getElementById('bucket-select').value, currentPrefix);
+                });
+                breadcrumbItem.appendChild(breadcrumbLink);
+            }
+            breadcrumb.appendChild(breadcrumbItem);
+        });
+    }
+});
+</script>
 </body>
 </html>
